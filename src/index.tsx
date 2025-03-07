@@ -3,8 +3,7 @@ import { Provider } from "mobx-react";
 import ReactDOM from "react-dom";
 import App from "./components/App";
 import * as serviceWorker from "./serviceWorker";
-import stores from "./stores";
-import "./util/util.scss";
+import stores from "./stores/TableStore";
 import { BrowserRouter } from "react-router-dom";
 
 ReactDOM.render(
