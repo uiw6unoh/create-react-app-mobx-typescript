@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@heroicons/react": "^2.2.0",
+    "@lucasmogari/react-pagination": "^2.1.0",
     "@tanstack/react-table": "^8.11.8",
     "@testing-library/jest-dom": "^6.4.2",
     "@testing-library/react": "^14.2.1",
@@ -12,8 +14,10 @@
     "@types/react": "^18.2.65",
     "@types/react-dom": "^18.2.22",
     "@types/react-router-dom": "^5.3.3",
+    "ajv": "^8.17.1",
     "autoprefixer": "^10.4.18",
     "axios": "^1.6.7",
+    "classnames": "^2.5.1",
     "mobx": "^6.13.0",
     "mobx-react": "^9.1.0",
     "postcss": "^8.4.35",
@@ -23,7 +27,7 @@
     "react-icons": "^5.0.1",
     "react-router-dom": "^6.22.3",
     "react-scripts": "5.0.1",
-    "tailwindcss": "^3.4.1", 
+    "tailwindcss": "^3.4.1",
     "typescript": "^5.4.2"
   },
   "scripts": {

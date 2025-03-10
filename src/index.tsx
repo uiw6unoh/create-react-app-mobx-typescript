@@ -1,7 +1,7 @@
 import React from "react";
 import { Provider } from "mobx-react";
 import ReactDOM from "react-dom";
-import App from "./components/App";
+import App from "./app/App";
 import * as serviceWorker from "./serviceWorker";
 import stores from "./stores/TableStore";
 import { BrowserRouter } from "react-router-dom";
