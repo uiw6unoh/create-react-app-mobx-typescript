@@ -1,8 +1,16 @@
-// src/components/DataTable.tsx
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { flexRender, getCoreRowModel, getSortedRowModel, useReactTable, SortingState } from "@tanstack/react-table";
 import { observer } from "mobx-react";
 import tableStore from "../stores/TableStore";
+import ContextMenu, { MenuItem } from "./ContextMenu";
+import Popup from "./Popup";
+
+interface PopupInfo {
+  id: string;
+  title: string;
+  content: string;
+  position: { x: number; y: number };
+}
 
 interface DataTableProps {
   apiUrl: string;
@@ -11,11 +19,37 @@ interface DataTableProps {
   className?: string;
   store?: any;
   fetchMethod?: string;
+  rowMenuItems?: (row: any) => MenuItem[];
+  emptyAreaMenuItems?: MenuItem[];
 }
 
 const DataTable: React.FC<DataTableProps> = observer(
-  ({ apiUrl, columns, initialPageSize = 10, className = "", store = tableStore, fetchMethod = "fetchData" }) => {
-    const [sorting, setSorting] = React.useState<SortingState>([]);
+  ({
+    apiUrl,
+    columns,
+    initialPageSize = 10,
+    className = "",
+    store = tableStore,
+    fetchMethod = "fetchData",
+    rowMenuItems,
+    emptyAreaMenuItems,
+  }) => {
+    const [sorting, setSorting] = useState<SortingState>([]);
+    // 컨텍스트 메뉴 상태 관리
+    const [contextMenu, setContextMenu] = useState<{
+      visible: boolean;
+      x: number;
+      y: number;
+      items: MenuItem[];
+    }>({
+      visible: false,
+      x: 0,
+      y: 0,
+      items: [],
+    });
+
+    // 팝업 관리를 위한 상태 추가
+    const [popups, setPopups] = useState<PopupInfo[]>([]);
 
     // 데이터 가져오기 함수
     const fetchData = () => {
@@ -43,32 +77,76 @@ const DataTable: React.FC<DataTableProps> = observer(
     const table = useReactTable({
       data: store.data,
       columns,
-      state: {
-        sorting,
-      },
-      onSortingChange: setSorting,
       getCoreRowModel: getCoreRowModel(),
       getSortedRowModel: getSortedRowModel(),
       manualPagination: true,
       debugTable: process.env.NODE_ENV === "development",
     });
 
-    // 로딩 표시
-    if (store.loading) {
-      return (
-        <div className="flex justify-center items-center p-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-        </div>
-      );
-    }
+    // 셀 더블클릭 핸들러
+    const handleCellDoubleClick = (e: React.MouseEvent, cell: any) => {
+      const value = cell.getValue();
 
-    // 에러 표시
-    if (store.error) {
-      return <div className="text-red-500 p-4 text-sm">{store.error}</div>;
-    }
+      // 값이 없으면 팝업 표시 안함
+      if (value === null || value === undefined || value === "") {
+        return;
+      }
+
+      // 헤더 정보 가져오기
+      const columnId = cell.column.id;
+      const headerValue = columns.find((col) => col.id === columnId || col.accessorKey === columnId)?.header;
+      const title = typeof headerValue === "function" ? headerValue() : headerValue || columnId;
+
+      // 새 팝업 생성
+      const newPopup: PopupInfo = {
+        id: `popup-${Date.now()}`,
+        title: String(title),
+        content: String(value),
+        position: { x: e.clientX, y: e.clientY },
+      };
+
+      setPopups((prevPopups) => [...prevPopups, newPopup]);
+    };
+
+    // 팝업 닫기 핸들러
+    const handleClosePopup = (id: string) => {
+      setPopups((prevPopups) => prevPopups.filter((popup) => popup.id !== id));
+    };
+
+    // 우클릭 핸들러 - 행
+    const handleRowContextMenu = (e: React.MouseEvent, row: any) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (rowMenuItems) {
+        setContextMenu({
+          visible: true,
+          x: e.clientX,
+          y: e.clientY,
+          items: rowMenuItems(row.original),
+        });
+      }
+    };
+
+    // 우클릭 핸들러 - 빈 영역
+    const handleEmptyAreaContextMenu = (e: React.MouseEvent) => {
+      e.preventDefault();
+      if (emptyAreaMenuItems) {
+        setContextMenu({
+          visible: true,
+          x: e.clientX,
+          y: e.clientY,
+          items: emptyAreaMenuItems,
+        });
+      }
+    };
+
+    // 컨텍스트 메뉴 닫기
+    const closeContextMenu = () => {
+      setContextMenu({ ...contextMenu, visible: false });
+    };
 
     return (
-      <div className={`overflow-x-auto ${className}`}>
+      <div className={`overflow-x-auto ${className}`} onContextMenu={handleEmptyAreaContextMenu}>
         <table className="min-w-full divide-y divide-gray-200 border-collapse text-xs">
           <thead className="bg-gray-400 text-white">
             {table.getHeaderGroups().map((headerGroup) => (
@@ -76,15 +154,10 @@ const DataTable: React.FC<DataTableProps> = observer(
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider cursor-pointer border border-gray-300"
-                    onClick={header.column.getToggleSortingHandler()}
+                    className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider border border-gray-300"
                   >
                     <div className="flex items-center">
                       {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                      {{
-                        asc: " 🔼",
-                        desc: " 🔽",
-                      }[header.column.getIsSorted() as string] ?? null}
                     </div>
                   </th>
                 ))}
@@ -94,9 +167,17 @@ const DataTable: React.FC<DataTableProps> = observer(
           <tbody className="bg-white divide-y divide-gray-200">
             {table.getRowModel().rows.length > 0 ? (
               table.getRowModel().rows.map((row, idx) => (
-                <tr key={row.id} className={idx % 2 === 0 ? "bg-gray-50" : "bg-white"}>
+                <tr
+                  key={row.id}
+                  className={idx % 2 === 0 ? "bg-gray-50" : "bg-white"}
+                  onContextMenu={(e) => handleRowContextMenu(e, row)}
+                >
                   {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="px-3 py-2 whitespace-nowrap text-gray-900 border border-gray-200">
+                    <td
+                      key={cell.id}
+                      className="px-3 py-2 whitespace-nowrap text-gray-900 border border-gray-200"
+                      onDoubleClick={(e) => handleCellDoubleClick(e, cell)}
+                    >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
                   ))}
@@ -111,6 +192,21 @@ const DataTable: React.FC<DataTableProps> = observer(
             )}
           </tbody>
         </table>
+
+        {contextMenu.visible && (
+          <ContextMenu x={contextMenu.x} y={contextMenu.y} items={contextMenu.items} onClose={closeContextMenu} />
+        )}
+
+        {popups.map((popup) => (
+          <Popup
+            key={popup.id}
+            id={popup.id}
+            title={popup.title}
+            content={popup.content}
+            initialPosition={popup.position}
+            onClose={handleClosePopup}
+          />
+        ))}
       </div>
     );
   }

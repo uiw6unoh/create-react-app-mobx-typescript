@@ -1,4 +1,3 @@
-// src/stores/EventStore.ts
 import { observable, action, makeObservable, runInAction } from "mobx";
 import api from "../app/api/api";
 import { EventData, EventResponse } from "../types/EventData";
@@ -28,7 +27,6 @@ class EventStore {
         companyId: this.companyId,
         page: this.currentPage,
         limit: this.pageSize,
-        // 정렬 정보가 필요하다면 추가
         // sort: this.sorting.length > 0 ? `${this.sorting[0].id}:${this.sorting[0].desc ? 'desc' : 'asc'}` : undefined
       });
 
