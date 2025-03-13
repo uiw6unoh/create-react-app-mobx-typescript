@@ -4,7 +4,7 @@ import { observer } from "mobx-react";
 import { EventData } from "../types/EventData";
 import eventStore from "../stores/EventStore";
 import DataTable from "../components/DataTable";
-import { MenuItem } from "../components/ContextMenu";
+import { MenuItem } from "../components/ui/ContextMenu";
 
 const EventTablePage: React.FC = observer(() => {
   const [companyId] = useState("2");
@@ -104,6 +104,15 @@ const EventTablePage: React.FC = observer(() => {
     // },
   ];
 
+  const getRowClassName = (row: EventData) => {
+    if (row.useYN === true) {
+      return "bg-green-50"; // 활성화된 행은 녹색 배경
+    } else if (row.useYN === false) {
+      return "bg-red-50"; // 비활성화된 행은 빨간색 배경
+    }
+    return "";
+  };
+
   return (
     <div className="w-full">
       <h2 className="text-2xl font-semibold mb-4">CCTV 이벤트 테이블</h2>
@@ -115,6 +124,7 @@ const EventTablePage: React.FC = observer(() => {
         className="w-full shadow-lg rounded-lg"
         rowMenuItems={getRowMenuItems}
         emptyAreaMenuItems={emptyAreaMenuItems}
+        getRowClassName={getRowClassName}
       />
     </div>
   );

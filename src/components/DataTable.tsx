@@ -2,8 +2,8 @@ import React, { useEffect, useState } from "react";
 import { flexRender, getCoreRowModel, getSortedRowModel, useReactTable, SortingState } from "@tanstack/react-table";
 import { observer } from "mobx-react";
 import tableStore from "../stores/TableStore";
-import ContextMenu, { MenuItem } from "./ContextMenu";
-import Popup from "./Popup";
+import ContextMenu, { MenuItem } from "./ui/ContextMenu";
+import Popup from "./ui/Popup";
 
 interface PopupInfo {
   id: string;
@@ -21,6 +21,7 @@ interface DataTableProps {
   fetchMethod?: string;
   rowMenuItems?: (row: any) => MenuItem[];
   emptyAreaMenuItems?: MenuItem[];
+  getRowClassName?: (row: any) => string;
 }
 
 const DataTable: React.FC<DataTableProps> = observer(
@@ -33,6 +34,7 @@ const DataTable: React.FC<DataTableProps> = observer(
     fetchMethod = "fetchData",
     rowMenuItems,
     emptyAreaMenuItems,
+    getRowClassName,
   }) => {
     const [sorting, setSorting] = useState<SortingState>([]);
     // 컨텍스트 메뉴 상태 관리
@@ -166,23 +168,32 @@ const DataTable: React.FC<DataTableProps> = observer(
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {table.getRowModel().rows.length > 0 ? (
-              table.getRowModel().rows.map((row, idx) => (
-                <tr
-                  key={row.id}
-                  className={idx % 2 === 0 ? "bg-gray-50" : "bg-white"}
-                  onContextMenu={(e) => handleRowContextMenu(e, row)}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <td
-                      key={cell.id}
-                      className="px-3 py-2 whitespace-nowrap text-gray-900 border border-gray-200"
-                      onDoubleClick={(e) => handleCellDoubleClick(e, cell)}
-                    >
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
-                  ))}
-                </tr>
-              ))
+              table.getRowModel().rows.map((row, idx) => {
+                // 기본 행 스타일링 (홀/짝 행)
+                let rowClassName = idx % 2 === 0 ? "bg-gray-50" : "bg-white";
+
+                // 커스텀 행 스타일링 적용 (getRowClassName이 제공된 경우)
+                if (getRowClassName) {
+                  const customClass = getRowClassName(row.original);
+                  if (customClass) {
+                    rowClassName = customClass;
+                  }
+                }
+
+                return (
+                  <tr key={row.id} className={rowClassName} onContextMenu={(e) => handleRowContextMenu(e, row)}>
+                    {row.getVisibleCells().map((cell) => (
+                      <td
+                        key={cell.id}
+                        className="px-3 py-2 whitespace-nowrap text-gray-900 border border-gray-200"
+                        onDoubleClick={(e) => handleCellDoubleClick(e, cell)}
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })
             ) : (
               <tr>
                 <td colSpan={columns.length} className="px-3 py-4 text-center text-gray-500 border border-gray-200">
